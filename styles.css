@@ -142,6 +142,29 @@ body {
   min-width: 36px;
 }
 
+.add-course-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.add-course-btn:hover {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.5);
+  transform: translateY(-1px);
+}
+
 .menu-toggle-btn {
   width: 22px;
   height: 22px;
@@ -347,6 +370,13 @@ body {
   flex-direction: column;
   gap: 4px;
   overflow: hidden;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.course-card:hover {
+  border-color: rgba(186, 230, 253, 0.72);
+  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.22), 0 10px 22px rgba(5, 10, 20, 0.42);
+  filter: saturate(1.06);
 }
 
 .course-card.is-current {
@@ -389,6 +419,136 @@ body {
 .course-card.tight .course-location,
 .course-card.tight .course-note {
   font-size: 10px;
+}
+
+.course-card.manual-course {
+  border-style: dashed;
+}
+
+.course-card.manual-course.is-editable {
+  cursor: pointer;
+}
+
+.course-tag {
+  font-size: 9px;
+  line-height: 1;
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 2px 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: rgba(246, 251, 255, 0.92);
+  background: rgba(10, 18, 30, 0.2);
+}
+
+.add-course-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+}
+
+.add-course-modal.hidden {
+  display: none;
+}
+
+.add-course-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 8, 18, 0.5);
+  z-index: 0;
+}
+
+.add-course-panel {
+  position: relative;
+  z-index: 1;
+  width: min(360px, calc(100vw - 20px));
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: linear-gradient(180deg, rgba(18, 27, 48, 0.96), rgba(11, 18, 34, 0.96));
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
+  padding: 12px;
+}
+
+.add-course-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.add-course-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.field-input {
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(10, 16, 30, 0.75);
+  color: var(--text);
+  font-size: 12px;
+  padding: 0 8px;
+  outline: none;
+}
+
+.field-input:focus {
+  border-color: rgba(125, 211, 252, 0.56);
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.12);
+}
+
+.add-course-actions {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.dialog-btn {
+  height: 28px;
+  min-width: 62px;
+  border-radius: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.dialog-btn:hover {
+  border-color: rgba(125, 211, 252, 0.46);
+  color: var(--text);
+}
+
+.dialog-btn-primary {
+  border-color: rgba(74, 222, 128, 0.4);
+  color: #caf8d8;
+  background: rgba(74, 222, 128, 0.12);
+}
+
+.dialog-btn-primary:hover {
+  border-color: rgba(74, 222, 128, 0.62);
+  background: rgba(74, 222, 128, 0.17);
+}
+
+.dialog-btn-danger {
+  margin-right: auto;
+  border-color: rgba(251, 113, 133, 0.42);
+  color: #ffd5dc;
+  background: rgba(251, 113, 133, 0.12);
+}
+
+.dialog-btn-danger:hover {
+  border-color: rgba(251, 113, 133, 0.68);
+  background: rgba(251, 113, 133, 0.2);
 }
 
 @media (max-width: 1200px) {

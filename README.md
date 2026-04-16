@@ -18,3 +18,7 @@
 ## 创作者
 朱进
 叶深岚
+
+## 生成dist
+cd /d D:\schedule
+npm run dist

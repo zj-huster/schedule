@@ -13,17 +13,29 @@ const PERIODS = [
 ];
 
 const WEEKDAY_SHORT = ['一', '二', '三', '四', '五', '六', '日'];
+const MANUAL_SECTION_OPTIONS = [
+  { label: '1-2节', value: '1-2', startSection: 1, endSection: 2 },
+  { label: '3-4节', value: '3-4', startSection: 3, endSection: 4 },
+  { label: '5-6节', value: '5-6', startSection: 5, endSection: 6 },
+  { label: '7-8节', value: '7-8', startSection: 7, endSection: 8 },
+  { label: '9-10节', value: '9-10', startSection: 9, endSection: 10 }
+];
 
 const state = {
   filePath: '',
   rawEvents: [],
   occurrences: [],
+  manualEntries: [],
+  manualOccurrences: [],
   loadError: null,
   now: new Date(),
   viewDate: new Date(),
   renderedWeekStartMs: 0,
   renderedWeekEndMs: 0,
-  menuOpen: false
+  menuOpen: false,
+  addModalOpen: false,
+  courseFormMode: 'create',
+  selectedManualCourseId: ''
 };
 
 const elements = {};
@@ -49,11 +61,23 @@ function bindElements() {
   elements.prevWeekBtn = document.getElementById('prevWeekBtn');
   elements.currentWeekBtn = document.getElementById('currentWeekBtn');
   elements.nextWeekBtn = document.getElementById('nextWeekBtn');
+  elements.addCourseBtn = document.getElementById('addCourseBtn');
   elements.menuToggleBtn = document.getElementById('menuToggleBtn');
   elements.topMenuPanel = document.getElementById('topMenuPanel');
   elements.selectFileBtn = document.getElementById('selectFileBtn');
   elements.reloadBtn = document.getElementById('reloadBtn');
   elements.openFolderBtn = document.getElementById('openFolderBtn');
+  elements.addCourseModal = document.getElementById('addCourseModal');
+  elements.addCoursePanel = document.getElementById('addCoursePanel');
+  elements.addCourseForm = document.getElementById('addCourseForm');
+  elements.manualDateInput = document.getElementById('manualDateInput');
+  elements.manualPeriodInput = document.getElementById('manualPeriodInput');
+  elements.manualSummaryInput = document.getElementById('manualSummaryInput');
+  elements.manualLocationInput = document.getElementById('manualLocationInput');
+  elements.cancelAddCourseBtn = document.getElementById('cancelAddCourseBtn');
+  elements.confirmAddCourseBtn = document.getElementById('confirmAddCourseBtn');
+  elements.deleteCourseBtn = document.getElementById('deleteCourseBtn');
+  elements.addCourseTitle = document.getElementById('addCourseTitle');
   elements.statusBanner = document.getElementById('statusBanner');
   elements.weekGrid = document.getElementById('weekGrid');
 }
@@ -69,6 +93,10 @@ function bindEvents() {
 
   elements.currentWeekBtn.addEventListener('click', () => {
     resetViewingWeekToToday();
+  });
+
+  elements.addCourseBtn.addEventListener('click', () => {
+    openAddCourseModal();
   });
 
   elements.menuToggleBtn.addEventListener('click', (event) => {
@@ -103,6 +131,30 @@ function bindEvents() {
     setMenuOpen(false);
   });
 
+  elements.addCourseForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await submitManualCourseForm();
+  });
+
+  elements.cancelAddCourseBtn.addEventListener('click', () => {
+    closeAddCourseModal();
+  });
+
+  elements.deleteCourseBtn.addEventListener('click', async () => {
+    await deleteCurrentManualCourse();
+  });
+
+  elements.addCourseModal.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target && target.dataset && target.dataset.closeAddModal === 'true') {
+      closeAddCourseModal();
+    }
+  });
+
+  elements.addCoursePanel.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+
   document.addEventListener('click', () => {
     if (state.menuOpen) {
       setMenuOpen(false);
@@ -112,6 +164,11 @@ function bindEvents() {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.menuOpen) {
       setMenuOpen(false);
+      return;
+    }
+
+    if (event.key === 'Escape' && state.addModalOpen) {
+      closeAddCourseModal();
     }
   });
 }
@@ -157,6 +214,8 @@ async function loadSchedule() {
     if (!state.filePath) {
       state.rawEvents = [];
       state.occurrences = [];
+      state.manualEntries = [];
+      state.manualOccurrences = [];
       state.loadError = null;
       renderAll();
       setStatus('尚未选择课表文件，请从右上角三点菜单选择 .ics 文件。', 'info');
@@ -181,6 +240,7 @@ async function loadSchedule() {
     renderFilePathText();
     state.rawEvents = parseIcsFile(fileResult.content || '');
     state.occurrences = expandOccurrences(state.rawEvents);
+    await loadManualCourses();
     state.loadError = null;
 
     renderAll();
@@ -188,11 +248,50 @@ async function loadSchedule() {
   } catch (error) {
     state.rawEvents = [];
     state.occurrences = [];
+    state.manualEntries = [];
+    state.manualOccurrences = [];
     state.loadError = error?.message || '读取课表失败。';
     renderAll();
     showStatus('读取课表失败。', 'error', state.loadError);
   }
 }
+
+async function reloadScheduleAfterMutation() {
+  await loadSchedule();
+  renderAll();
+}
+
+async function loadManualCourses() {
+  try {
+    const result = await window.scheduleApi.getManualCourses();
+    if (!result || !result.ok || !Array.isArray(result.items)) {
+      state.manualEntries = [];
+      state.manualOccurrences = [];
+      return;
+    }
+
+    const manualIdsInIcs = new Set(
+      state.rawEvents
+        .map((event) => event.manualEntryId)
+        .filter((id) => typeof id === 'string' && id.length > 0)
+    );
+
+    state.manualEntries = result.items;
+    state.manualOccurrences = state.manualEntries
+      .filter((item) => !manualIdsInIcs.has(String(item.id || '')))
+      .map((item) => mapManualEntryToOccurrence(item))
+      .filter(Boolean);
+  } catch (error) {
+    state.manualEntries = [];
+    state.manualOccurrences = [];
+  }
+}
+
+  function refreshManualOccurrences() {
+    state.manualOccurrences = state.manualEntries
+      .map((item) => mapManualEntryToOccurrence(item))
+      .filter(Boolean);
+  }
 
 async function chooseScheduleFile() {
   try {
@@ -242,6 +341,9 @@ function renderWeekGrid() {
 
   const weekRange = getWeekRange(state.viewDate);
   const weekOccurrences = state.occurrences
+    .filter((occurrence) => isWithinRange(occurrence.start, weekRange.start, weekRange.end))
+    .sort((left, right) => left.start - right.start);
+  const weekManualOccurrences = state.manualOccurrences
     .filter((occurrence) => isWithinRange(occurrence.start, weekRange.start, weekRange.end))
     .sort((left, right) => left.start - right.start);
   const onCurrentWeek = isViewingCurrentWeek();
@@ -305,6 +407,15 @@ function renderWeekGrid() {
   }
 
   weekOccurrences.forEach((occurrence) => {
+    appendCourseCard(grid, occurrence, onCurrentWeek);
+  });
+
+  weekManualOccurrences.forEach((occurrence) => {
+    appendCourseCard(grid, occurrence, onCurrentWeek);
+  });
+}
+
+function appendCourseCard(grid, occurrence, onCurrentWeek) {
     const startPeriod = Math.max(1, occurrence.periodStart);
     const endPeriod = Math.min(PERIODS.length, occurrence.periodEnd);
     const span = Math.max(1, endPeriod - startPeriod + 1);
@@ -314,24 +425,33 @@ function renderWeekGrid() {
     const isCurrent = onCurrentWeek && isOccurrenceActive(occurrence, state.now);
     const tightClass = span <= 2 ? ' tight' : '';
 
-    card.className = `course-card${isCurrent ? ' is-current' : ''}${tightClass}`;
+    const manualClass = occurrence.isManual ? ' manual-course is-editable' : '';
+    card.className = `course-card${isCurrent ? ' is-current' : ''}${tightClass}${manualClass}`;
     card.style.gridColumn = String(getWeekColumnFromDay(occurrence.weekday));
     card.style.gridRow = `${startPeriod + 1} / span ${span}`;
     card.style.setProperty('--course-bg', color.bg);
     card.style.setProperty('--course-border', color.border);
     card.dataset.startMs = String(occurrence.start.getTime());
     card.dataset.endMs = String(occurrence.end.getTime());
+    if (occurrence.isManual) {
+      card.dataset.manualId = String(occurrence.manualEntryId || '');
+      card.addEventListener('click', (event) => {
+        event.stopPropagation();
+        openEditCourseModalById(String(occurrence.manualEntryId || ''));
+      });
+    }
     card.title = buildOccurrenceTooltip(occurrence);
 
     const weekNote = occurrence.weekRuleText ? `<div class="course-note">${escapeHtml(occurrence.weekRuleText)}</div>` : '';
+    const manualTag = occurrence.isManual ? '<div class="course-tag">手动</div>' : '';
     card.innerHTML = `
       <div class="course-title">${escapeHtml(occurrence.summary || '未命名课程')}</div>
       ${occurrence.location ? `<div class="course-location">${escapeHtml(occurrence.location)}</div>` : ''}
       ${weekNote}
+      ${manualTag}
     `;
 
     grid.appendChild(card);
-  });
 }
 
 function renderWeekGridHighlights() {
@@ -406,6 +526,7 @@ function parseIcsFile(content) {
 
 function buildEvent(lines) {
   const event = {
+    uid: '',
     summary: '',
     location: '',
     description: '',
@@ -428,6 +549,9 @@ function buildEvent(lines) {
     switch (parsed.name) {
       case 'SUMMARY':
         event.summary = parsed.value;
+        break;
+      case 'UID':
+        event.uid = parsed.value;
         break;
       case 'LOCATION':
         event.location = parsed.value;
@@ -460,8 +584,14 @@ function buildEvent(lines) {
   event.periodText = periodRange.label;
   event.weekday = event.start.getDay();
   event.weekRuleText = extractWeekRuleText(event.description || '') || '';
+  event.manualEntryId = extractManualEntryId(event.description || '');
 
   return event;
+}
+
+function extractManualEntryId(text) {
+  const match = String(text).match(/MANUAL_ENTRY_ID:([^\n\r]+)/);
+  return match ? String(match[1]).trim() : '';
 }
 
 function expandOccurrences(events) {
@@ -501,7 +631,9 @@ function createOccurrence(event, start, end) {
     weekday: start.getDay(),
     periodStart: periodRange.start,
     periodEnd: periodRange.end,
-    periodText
+    periodText,
+    isManual: Boolean(event.manualEntryId),
+    manualEntryId: event.manualEntryId || ''
   };
 }
 
@@ -857,6 +989,257 @@ function showStatus(message, type = 'info', detail = '') {
 
 function setStatus(message, type = 'info') {
   renderStatusText(message, type);
+}
+
+function openAddCourseModal() {
+  if (!elements.addCourseModal) {
+    return;
+  }
+
+  state.courseFormMode = 'create';
+  state.selectedManualCourseId = '';
+  syncCourseFormModeView();
+
+  state.addModalOpen = true;
+  elements.addCourseModal.classList.remove('hidden');
+  elements.addCourseModal.setAttribute('aria-hidden', 'false');
+
+  const dateBasis = state.viewDate || state.now;
+  elements.manualDateInput.value = toInputDate(dateBasis);
+  elements.manualPeriodInput.value = MANUAL_SECTION_OPTIONS[0].value;
+  elements.manualSummaryInput.value = '';
+  elements.manualLocationInput.value = '';
+
+  window.setTimeout(() => {
+    elements.manualSummaryInput.focus();
+  }, 0);
+}
+
+function closeAddCourseModal() {
+  if (!elements.addCourseModal) {
+    return;
+  }
+
+  state.addModalOpen = false;
+  state.courseFormMode = 'create';
+  state.selectedManualCourseId = '';
+  elements.addCourseModal.classList.add('hidden');
+  elements.addCourseModal.setAttribute('aria-hidden', 'true');
+}
+
+function syncCourseFormModeView() {
+  const editMode = state.courseFormMode === 'edit';
+  elements.addCourseTitle.textContent = editMode ? '编辑课程' : '手动添加课程';
+  elements.confirmAddCourseBtn.textContent = editMode ? '保存修改' : '确认添加';
+  elements.deleteCourseBtn.classList.toggle('hidden', !editMode);
+}
+
+function openEditCourseModalById(manualId) {
+  const entry = state.manualEntries.find((item) => String(item.id || '') === String(manualId || ''));
+  if (!entry) {
+    showStatus('未找到可编辑的课程记录。', 'error');
+    return;
+  }
+
+  state.courseFormMode = 'edit';
+  state.selectedManualCourseId = String(entry.id || '');
+  syncCourseFormModeView();
+
+  state.addModalOpen = true;
+  elements.addCourseModal.classList.remove('hidden');
+  elements.addCourseModal.setAttribute('aria-hidden', 'false');
+
+  elements.manualDateInput.value = String(entry.date || '');
+  const option = getSectionOptionFromEntry(entry);
+  elements.manualPeriodInput.value = option ? option.value : MANUAL_SECTION_OPTIONS[0].value;
+  elements.manualSummaryInput.value = String(entry.summary || '');
+  elements.manualLocationInput.value = String(entry.location || '');
+
+  window.setTimeout(() => {
+    elements.manualSummaryInput.focus();
+  }, 0);
+}
+
+function getSectionOptionFromEntry(entry) {
+  const sectionValue = String(entry?.sectionValue || '').trim();
+  if (sectionValue) {
+    return MANUAL_SECTION_OPTIONS.find((item) => item.value === sectionValue) || null;
+  }
+
+  const start = Number(entry?.startSection || 0);
+  const end = Number(entry?.endSection || 0);
+  return MANUAL_SECTION_OPTIONS.find((item) => item.startSection === start && item.endSection === end) || null;
+}
+
+async function submitManualCourseForm() {
+  const dateText = String(elements.manualDateInput.value || '').trim();
+  const sectionValue = String(elements.manualPeriodInput.value || '').trim();
+  const summary = String(elements.manualSummaryInput.value || '').trim();
+  const location = String(elements.manualLocationInput.value || '').trim();
+  const selectedOption = MANUAL_SECTION_OPTIONS.find((item) => item.value === sectionValue) || null;
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateText) || !summary || !selectedOption) {
+    showStatus('请填写完整：日期、节次、课程名称。', 'error');
+    return;
+  }
+
+  if (!state.filePath) {
+    showStatus('请先在右上角菜单选择 .ics 课表文件。', 'error');
+    return;
+  }
+
+  elements.confirmAddCourseBtn.disabled = true;
+  elements.deleteCourseBtn.disabled = true;
+
+  try {
+    const payload = {
+      date: dateText,
+      sectionValue: selectedOption.value,
+      sectionLabel: selectedOption.label,
+      startSection: selectedOption.startSection,
+      endSection: selectedOption.endSection,
+      summary,
+      location
+    };
+
+    if (state.courseFormMode === 'edit') {
+      await submitManualCourseUpdate(payload);
+    } else {
+      await submitManualCourseCreate(payload);
+    }
+
+    renderAll();
+    closeAddCourseModal();
+  } catch (error) {
+    showStatus('保存课程失败。', 'error', error?.message || String(error));
+  } finally {
+    elements.confirmAddCourseBtn.disabled = false;
+    elements.deleteCourseBtn.disabled = false;
+  }
+}
+
+async function submitManualCourseCreate(payload) {
+  const result = await window.scheduleApi.addManualCourse(payload);
+  if (!result || !result.ok || !result.item) {
+    throw new Error(result?.message || '添加课程失败。');
+  }
+
+  await reloadScheduleAfterMutation();
+  showStatus('手动课程已添加并保存。', 'success');
+}
+
+async function submitManualCourseUpdate(payload) {
+  const targetId = String(state.selectedManualCourseId || '').trim();
+  if (!targetId) {
+    throw new Error('未找到要编辑的课程。');
+  }
+
+  const result = await window.scheduleApi.updateManualCourse({
+    id: targetId,
+    ...payload
+  });
+
+  if (!result || !result.ok || !result.item) {
+    throw new Error(result?.message || '保存修改失败。');
+  }
+
+  await reloadScheduleAfterMutation();
+  showStatus('课程已更新。', 'success');
+}
+
+async function deleteCurrentManualCourse() {
+  if (state.courseFormMode !== 'edit') {
+    return;
+  }
+
+  const targetId = String(state.selectedManualCourseId || '').trim();
+  if (!targetId) {
+    showStatus('未找到要删除的课程。', 'error');
+    return;
+  }
+
+  const confirmed = window.confirm('确认删除这门课程吗？删除后不可恢复。');
+  if (!confirmed) {
+    return;
+  }
+
+  elements.deleteCourseBtn.disabled = true;
+  elements.confirmAddCourseBtn.disabled = true;
+
+  try {
+    const result = await window.scheduleApi.deleteManualCourse({ id: targetId });
+    if (!result || !result.ok) {
+      showStatus(result?.message || '删除课程失败。', 'error', result?.details || '');
+      return;
+    }
+
+    await reloadScheduleAfterMutation();
+    closeAddCourseModal();
+    showStatus('课程已删除。', 'success');
+  } catch (error) {
+    showStatus('删除课程失败。', 'error', error?.message || String(error));
+  } finally {
+    elements.deleteCourseBtn.disabled = false;
+    elements.confirmAddCourseBtn.disabled = false;
+  }
+}
+
+function mapManualEntryToOccurrence(entry) {
+  const dateText = String(entry?.date || '');
+  const legacyPeriod = Number(entry?.period || 0);
+  const valueFromEntry = String(entry?.sectionValue || '').trim();
+  const optionFromValue = MANUAL_SECTION_OPTIONS.find((item) => item.value === valueFromEntry) || null;
+  let startSection = Number(entry?.startSection || 0);
+  let endSection = Number(entry?.endSection || 0);
+
+  if (optionFromValue) {
+    startSection = optionFromValue.startSection;
+    endSection = optionFromValue.endSection;
+  } else if (legacyPeriod >= 1 && legacyPeriod <= 10) {
+    startSection = legacyPeriod;
+    endSection = legacyPeriod;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateText) || !Number.isInteger(startSection) || !Number.isInteger(endSection) || startSection < 1 || endSection > 10 || startSection > endSection) {
+    return null;
+  }
+
+  const [year, month, day] = dateText.split('-').map(Number);
+  const startConfig = PERIODS[startSection - 1];
+  const endConfig = PERIODS[endSection - 1];
+  if (!startConfig || !endConfig) {
+    return null;
+  }
+
+  const [startHour, startMinute] = startConfig.start.split(':').map(Number);
+  const [endHour, endMinute] = endConfig.end.split(':').map(Number);
+  const start = new Date(year, month - 1, day, startHour, startMinute, 0, 0);
+  const end = new Date(year, month - 1, day, endHour, endMinute, 0, 0);
+  const label = optionFromValue ? optionFromValue.label : `${startSection}${startSection === endSection ? '' : `-${endSection}`}节`;
+
+  return {
+    uid: String(entry.id || ''),
+    summary: String(entry.summary || '').trim() || '未命名课程',
+    location: String(entry.location || '').trim(),
+    description: String(entry.note || ''),
+    rrule: '',
+    start,
+    end,
+    periodText: label,
+    periodStart: startSection,
+    periodEnd: endSection,
+    weekRuleText: '',
+    weekday: start.getDay(),
+    isManual: true,
+    manualEntryId: String(entry.id || '')
+  };
+}
+
+function toInputDate(date) {
+  const year = String(date.getFullYear()).padStart(4, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function escapeHtml(value) {

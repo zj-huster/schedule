@@ -24,6 +24,7 @@
             <button id="currentWeekBtn" class="week-nav-btn week-nav-btn-main" type="button" title="回到本周">本周</button>
             <button id="nextWeekBtn" class="week-nav-btn" type="button" title="下一周">›</button>
           </div>
+          <button id="addCourseBtn" class="add-course-btn" type="button" title="手动添加课程" aria-label="手动添加课程">+</button>
           <button id="menuToggleBtn" class="menu-toggle-btn" aria-expanded="false" aria-controls="topMenuPanel" title="打开菜单">
             ⋯
           </button>
@@ -40,6 +41,38 @@
       <main class="timetable-main">
         <div id="weekGrid" class="week-grid-shell"></div>
       </main>
+
+      <div id="addCourseModal" class="add-course-modal hidden" aria-hidden="true">
+        <div class="add-course-backdrop" data-close-add-modal="true"></div>
+        <div id="addCoursePanel" class="add-course-panel" role="dialog" aria-modal="true" aria-labelledby="addCourseTitle">
+          <h2 id="addCourseTitle" class="add-course-title">手动添加课程</h2>
+          <form id="addCourseForm" class="add-course-form" novalidate>
+            <label class="field-label" for="manualDateInput">日期</label>
+            <input id="manualDateInput" class="field-input" type="date" required />
+
+            <label class="field-label" for="manualPeriodInput">节次</label>
+            <select id="manualPeriodInput" class="field-input" required>
+              <option value="1-2">1-2节</option>
+              <option value="3-4">3-4节</option>
+              <option value="5-6">5-6节</option>
+              <option value="7-8">7-8节</option>
+              <option value="9-10">9-10节</option>
+            </select>
+
+            <label class="field-label" for="manualSummaryInput">课程名称</label>
+            <input id="manualSummaryInput" class="field-input" type="text" maxlength="64" placeholder="例如：高等数学" required />
+
+            <label class="field-label" for="manualLocationInput">地点</label>
+            <input id="manualLocationInput" class="field-input" type="text" maxlength="64" placeholder="例如：A302" />
+
+            <div class="add-course-actions">
+              <button id="deleteCourseBtn" class="dialog-btn dialog-btn-danger hidden" type="button">删除课程</button>
+              <button id="cancelAddCourseBtn" class="dialog-btn" type="button">取消</button>
+              <button id="confirmAddCourseBtn" class="dialog-btn dialog-btn-primary" type="submit">确认添加</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <script src="renderer.js"></script>
