@@ -4,6 +4,7 @@
 
 
 ## 使用说明
+<img width="1080" height="2188" alt="Screenshot_2026-04-16-15-36-34-304_com suda yzune" src="https://github.com/user-attachments/assets/2bc0f1d9-e23d-4572-aac5-96ecd124523a" />
 
 （可在wakeup/其他课程表软件上导出.ics日历文件）
 1. 启动应用后，通过右上角菜单选择 `.ics` 文件。
