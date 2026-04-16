@@ -1,0 +1,49 @@
+{
+  "name": "schedule-desktop-tool",
+  "version": "1.0.0",
+  "description": "Electron desktop schedule viewer for local ICS files",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dist": "electron-builder --win"
+  },
+  "keywords": [
+    "electron",
+    "schedule",
+    "ics"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.2",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.schedule.desktop",
+    "productName": "课表桌面工具",
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "one.ics",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "main.js"
+    }
+  }
+}

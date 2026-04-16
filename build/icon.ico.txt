@@ -1,0 +1,9 @@
+在此位置放置 icon.ico 文件
+
+请将 256x256 或更高分辨率的 .ico 图标文件放在此目录中。
+如果不提供图标，electron-builder 将使用默认图标进行打包。
+
+你可以使用以下工具创建 ico 文件：
+- ImageMagick: convert image.png -define icon:auto-resize=256,128,96,64,48,32,16 icon.ico
+- Online tools: https://icoconvert.com/ 或类似的在线工具
+- Windows 自带工具或其他图形编辑工具

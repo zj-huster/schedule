@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>课表桌面工具</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-col">
+          <h1 class="app-title">课表桌面工具</h1>
+          <p id="filePathText" class="path-text">课表路径：加载中...</p>
+        </div>
+
+        <div class="date-col">
+          <div id="currentDate" class="date-text">--</div>
+        </div>
+
+        <div class="action-col">
+          <div class="week-nav" aria-label="周切换">
+            <button id="prevWeekBtn" class="week-nav-btn" type="button" title="上一周">‹</button>
+            <button id="currentWeekBtn" class="week-nav-btn week-nav-btn-main" type="button" title="回到本周">本周</button>
+            <button id="nextWeekBtn" class="week-nav-btn" type="button" title="下一周">›</button>
+          </div>
+          <button id="menuToggleBtn" class="menu-toggle-btn" aria-expanded="false" aria-controls="topMenuPanel" title="打开菜单">
+            ⋯
+          </button>
+          <div id="topMenuPanel" class="top-menu-panel hidden" role="menu">
+            <button id="selectFileBtn" class="menu-item" type="button" role="menuitem">选择课表文件</button>
+            <button id="reloadBtn" class="menu-item" type="button" role="menuitem">刷新课表</button>
+            <button id="openFolderBtn" class="menu-item" type="button" role="menuitem">打开目录</button>
+          </div>
+        </div>
+      </header>
+
+      <div id="statusBanner" class="status-banner hidden"></div>
+
+      <main class="timetable-main">
+        <div id="weekGrid" class="week-grid-shell"></div>
+      </main>
+    </div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>
